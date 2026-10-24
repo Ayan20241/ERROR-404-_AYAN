@@ -26,7 +26,11 @@ If two documents conflict, do not silently guess: flag the exact conflict, choos
 
 ## Required commands
 
-The project should expose these scripts once scaffolded: `npm run dev`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run test:e2e`, and `npm run build`. If a script cannot be implemented or run, report that fact instead of claiming success.
+The target commands are `npm run dev`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run test:e2e`, and `npm run build`. The backend foundation currently provides all except `test:e2e`; Playwright and Supabase CLI scripts are deferred until the corresponding UI and database work is introduced. Report any command that has not been implemented or run rather than implying success.
+
+## Backend foundation
+
+The initial backend-only setup, environment configuration, API conventions, and phased implementation plan are documented in [docs/BACKEND_SETUP.md](./docs/BACKEND_SETUP.md).
 
 ## Critical database rule
 

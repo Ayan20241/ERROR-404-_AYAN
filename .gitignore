@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+supabase/.temp/
+supabase/.branches/
+
+.env*
+!.env.example
+
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*

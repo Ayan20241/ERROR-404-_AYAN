@@ -1,0 +1,7 @@
+project_id = "hyperlocal-events"
+
+[db]
+major_version = 17
+
+[db.seed]
+enabled = false

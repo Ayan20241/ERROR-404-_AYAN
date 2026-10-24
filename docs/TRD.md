@@ -6,34 +6,34 @@
 
 ## 1. Runtime & Platform
 
-| Item | Requirement |
-|---|---|
-| Node.js | ≥ 20 LTS (development machine runs Node 24) |
-| Package manager | npm only (no yarn/pnpm — one lockfile, `package-lock.json`) |
-| OS targets | Development on Windows/macOS/Linux; production runtime is Vercel (Linux) |
-| Browsers | Latest Chrome/Edge/Firefox/Safari; mobile Safari + Chrome Android |
-| Repo layout | Single Next.js app at repo root; `docs/`, `supabase/`, `tests/` as in ARCHITECTURE.md §7 |
+| Item            | Requirement                                                                              |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| Node.js         | ≥ 20 LTS (development machine runs Node 24)                                              |
+| Package manager | npm only (no yarn/pnpm — one lockfile, `package-lock.json`)                              |
+| OS targets      | Development on Windows/macOS/Linux; production runtime is Vercel (Linux)                 |
+| Browsers        | Latest Chrome/Edge/Firefox/Safari; mobile Safari + Chrome Android                        |
+| Repo layout     | Single Next.js app at repo root; `docs/`, `supabase/`, `tests/` as in ARCHITECTURE.md §7 |
 
 ## 2. Fixed Technology Stack
 
-| Concern | Technology | Version (major) | Notes |
-|---|---|---|---|
-| Framework | Next.js (App Router) | 16.x | Server Components by default; Route Handlers for APIs |
-| UI library | React | 19.x | Ships with Next.js 16 |
-| Language | TypeScript | stable version compatible with selected Next.js release; strict mode required | No JavaScript files for app code |
-| Styling | Tailwind CSS | 4.x | Theme tokens from DESIGN_SYSTEM.md; `@tailwindcss/postcss` |
-| UI components | shadcn/ui | initialize once, then commit generated components/config | Components are copied into `components/ui/` and owned; Radix-based |
-| Icons | Lucide React | compatible stable release | Only icon library allowed |
-| Database | PostgreSQL via Supabase | Supabase free tier | Schema + RLS per DATABASE.md / SECURITY.md |
-| DB/Auth client | `@supabase/supabase-js` | 2.x | Data + Auth APIs |
-| SSR auth | `@supabase/ssr` | 0.12.x | Cookie sessions in Server Components, Route Handlers, middleware |
-| Validation | zod | 4.x | One schema per input, shared between client types and server checks |
-| Maps | MapLibre GL JS | 6.x | Client-only, dynamically imported |
-| Charts | Recharts | 3.x | Organizer dashboard only |
-| Unit/integration tests | Vitest | compatible stable release | `tests/unit`, `tests/integration` |
-| E2E tests | Playwright (`@playwright/test`) | 1.x | Chromium only for the hackathon |
-| Class utilities | clsx + tailwind-merge | 2.x / 3.x | The standard shadcn `cn()` helper |
-| Component variants | class-variance-authority | 0.7.x | As used by shadcn/ui |
+| Concern                | Technology                      | Version (major)                                                               | Notes                                                               |
+| ---------------------- | ------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Framework              | Next.js (App Router)            | 16.x                                                                          | Server Components by default; Route Handlers for APIs               |
+| UI library             | React                           | 19.x                                                                          | Ships with Next.js 16                                               |
+| Language               | TypeScript                      | stable version compatible with selected Next.js release; strict mode required | No JavaScript files for app code                                    |
+| Styling                | Tailwind CSS                    | 4.x                                                                           | Theme tokens from DESIGN_SYSTEM.md; `@tailwindcss/postcss`          |
+| UI components          | shadcn/ui                       | initialize once, then commit generated components/config                      | Components are copied into `components/ui/` and owned; Radix-based  |
+| Icons                  | Lucide React                    | compatible stable release                                                     | Only icon library allowed                                           |
+| Database               | PostgreSQL via Supabase         | Supabase free tier                                                            | Schema + RLS per DATABASE.md / SECURITY.md                          |
+| DB/Auth client         | `@supabase/supabase-js`         | 2.x                                                                           | Data + Auth APIs                                                    |
+| SSR auth               | `@supabase/ssr`                 | 0.12.x                                                                        | Cookie sessions in Server Components, Route Handlers, middleware    |
+| Validation             | zod                             | 4.x                                                                           | One schema per input, shared between client types and server checks |
+| Maps                   | MapLibre GL JS                  | 6.x                                                                           | Client-only, dynamically imported                                   |
+| Charts                 | Recharts                        | 3.x                                                                           | Organizer dashboard only                                            |
+| Unit/integration tests | Vitest                          | compatible stable release                                                     | `tests/unit`, `tests/integration`                                   |
+| E2E tests              | Playwright (`@playwright/test`) | 1.x                                                                           | Chromium only for the hackathon                                     |
+| Class utilities        | clsx + tailwind-merge           | 2.x / 3.x                                                                     | The standard shadcn `cn()` helper                                   |
+| Component variants     | class-variance-authority        | 0.7.x                                                                         | As used by shadcn/ui                                                |
 
 **Explicitly NOT used** (do not add): Redux/Zustand/Jotai (React + server state is enough), any ORM (Prisma/Drizzle — the Supabase client is the data layer), date libraries (use `Intl` + native `Date`), CSS-in-JS, jQuery, Bootstrap/MUI/AntD, Firebase, any paid API, any LLM API in the core product, Redis, a separate backend service.
 
@@ -78,15 +78,15 @@ npx playwright install chromium
 
 ## 4. External Services & APIs (the complete list)
 
-| Service | Use | Cost | Key endpoints / config |
-|---|---|---|---|
-| **Supabase project** (one, free tier) | PostgreSQL DB, Auth, optional Storage | Free tier | Project URL + anon key + service-role key (env, §8). Auth redirect URLs must include the Vercel domain + `http://localhost:3000` |
-| **Supabase Auth API** | Email/password sign-up, sign-in, session refresh | — | Via `@supabase/ssr`; no direct REST calls from app code |
-| **Supabase PostgREST API** | All table reads/writes | — | Via `@supabase/supabase-js` only; RLS always on |
-| **Vercel** (free tier) | Hosting the Next.js app | Free tier | Build: `next build`; output default; env vars set in dashboard |
-| **OpenFreeMap** | Map style + tiles for MapLibre | Free, no key | Style URL: `https://tiles.openfreemap.org/styles/liberty`; attribution required in map control; respect provider fair-use |
-| **Browser Geolocation API** | Optional user location | Free, built-in | `navigator.geolocation.getCurrentPosition`; permission-gated; manual fallback mandatory |
-| **GitHub** | Source hosting only | Free | No GitHub API integration in the product |
+| Service                               | Use                                              | Cost           | Key endpoints / config                                                                                                           |
+| ------------------------------------- | ------------------------------------------------ | -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Supabase project** (one, free tier) | PostgreSQL DB, Auth, optional Storage            | Free tier      | Project URL + anon key + service-role key (env, §8). Auth redirect URLs must include the Vercel domain + `http://localhost:3000` |
+| **Supabase Auth API**                 | Email/password sign-up, sign-in, session refresh | —              | Via `@supabase/ssr`; no direct REST calls from app code                                                                          |
+| **Supabase PostgREST API**            | All table reads/writes                           | —              | Via `@supabase/supabase-js` only; RLS always on                                                                                  |
+| **Vercel** (free tier)                | Hosting the Next.js app                          | Free tier      | Build: `next build`; output default; env vars set in dashboard                                                                   |
+| **OpenFreeMap**                       | Map style + tiles for MapLibre                   | Free, no key   | Style URL: `https://tiles.openfreemap.org/styles/liberty`; attribution required in map control; respect provider fair-use        |
+| **Browser Geolocation API**           | Optional user location                           | Free, built-in | `navigator.geolocation.getCurrentPosition`; permission-gated; manual fallback mandatory                                          |
+| **GitHub**                            | Source hosting only                              | Free           | No GitHub API integration in the product                                                                                         |
 
 **Explicitly no other external calls.** No geocoding API (coordinates come from a map click, preset areas, or manual lat/lng entry). No email/SMS API (notifications are in-app rows). No analytics trackers. No external image CDN dependency (event images are organizer-supplied `https:` URLs).
 
@@ -100,31 +100,33 @@ Base: same origin, `/api`. All endpoints require a valid Supabase session cookie
 
 Error codes: `UNAUTHORIZED` (401), `FORBIDDEN` (403), `NOT_FOUND` (404), `VALIDATION` (400), `EVENT_FULL`, `DEADLINE_PASSED`, `ALREADY_REGISTERED`, `CONFLICT` (409), `INTERNAL` (500).
 
-| Method & path | Auth | Role | Purpose / contract |
-|---|---|---|---|
-| `GET /api/events` | Public | any | List published, upcoming events. Query: `q`, `category`, `dateFrom`, `dateTo`, `maxPrice`, `lat`, `lng`, `radiusKm`, `page`, `pageSize` (default 12, max 48). Returns `{ events: EventListItem[], total }`. |
-| `GET /api/events/[id]` | Public | any | Event detail (published only; drafts 404 for non-owners). Increments a genuine view row in `event_analytics` for signed-in viewers when that table is implemented. |
-| `GET /api/recommendations` | Required | attendee | SmartMatch ranked events for the current user: `{ results: { event, score, reasons[] }[] }`. Uses saved preferences unless overridden by query params (`lat`, `lng`, `radiusKm`). |
-| `POST /api/events/[id]/register` | Required | any (not own event) | Transactional registration (capacity + deadline + duplicate enforced). 201 → registration. Errors: `EVENT_FULL`, `DEADLINE_PASSED`, `ALREADY_REGISTERED`, `FORBIDDEN` for own event. |
-| `DELETE /api/events/[id]/register` | Required | attendee (own) | Cancel own registration; frees capacity transactionally. |
-| `POST /api/events/[id]/save` | Required | attendee | Idempotent save. `DELETE` on the same path unsaves. |
-| `GET /api/me/registrations` | Required | attendee | Own registrations (upcoming + past). |
-| `GET /api/me/saved` | Required | attendee | Own saved events. |
-| `GET /api/me/profile` / `PATCH /api/me/profile` | Required | own | Read/update own profile + preferences (validated; role field not patchable here). |
-| `POST /api/me/become-organizer` | Required | attendee | One-way self-upgrade to organizer (MVP rule, SECURITY.md §2). |
-| `GET /api/notifications` | Required | own | Own notifications, newest first; `?unread=true` filter. |
-| `POST /api/notifications/[id]/read` | Required | own | Mark one read. `POST /api/notifications/read-all` marks all. |
-| `POST /api/events/[id]/feedback` | Required | eligible attendee | One feedback per attendee per event; only after event end + `attendance_status = attended`. Body: `{ rating: 1..5, comment? }`. |
-| `POST /api/organizer/events` | Required | organizer | Create event (status starts `draft`; `publish: true` in body publishes). Returns the created event. |
-| `GET /api/organizer/events` | Required | organizer | Own events, all statuses, with registration counts. |
-| `PATCH /api/organizer/events/[id]` | Required | organizer (owner) | Edit own event. Capacity cannot drop below `registered_count` → `VALIDATION`. |
-| `POST /api/organizer/events/[id]/cancel` | Required | organizer (owner) | Sets status `cancelled`; creates notifications for all registered attendees in the same operation. |
-| `GET /api/organizer/events/[id]/attendees` | Required | organizer (owner) | Attendee display names + registration/attendance status only — never emails. |
-| `PATCH /api/organizer/events/[id]/attendance` | Required | organizer (owner) | Update attendance for a registered attendee after the event; body `{ attendeeId, attendanceStatus: "attended" | "no_show" }`; attendee cannot set their own attendance. P1 unless explicitly needed for the demo. |
-| `GET /api/organizer/stats` | Required | organizer | Real aggregates for own events: registrations per event, remaining capacity, total views (only if analytics rows exist). Recharts consumes this shape. |
-| `GET /api/admin/events` | Required | admin | All events incl. reported/suspicious, for moderation. |
-| `POST /api/admin/events/[id]/remove` | Required | admin | Remove (cancel + flag) an event; notifies organizer. |
-| `GET /api/admin/stats` | Required | admin | Platform totals: users, events, registrations. |
+| Method & path                                   | Auth     | Role                | Purpose / contract                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ----------------------------------------------- | -------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `GET /api/locations`                            | Public   | any                 | Without query, returns the India division catalog (`code`, `name`, `kind`). `?stateCode=IN-KA&q=...` returns cities for that state/UT; `?stateCode=IN-KA&cityId=IN-KA-BENGALURU` returns observed locality suggestions. City IDs are globally state-scoped; same-named cities remain distinct.                                                                                                                                                             |
+| `GET /api/events`                               | Public   | any                 | List published, upcoming events. Query: `q`, `category`, `dateFrom`, `dateTo`, `maxPrice`, `lat`, `lng`, `radiusKm`, `stateCode`, `cityId`, `locality`, `page`, `pageSize` (default 12, max 48). State/city/locality filters are intersected and applied in SQL before pagination. A city requires its state/UT; a locality requires its city. Returns `{ events: EventListItem[], total }`, including nullable location display fields for legacy events. |
+| `GET /api/events/[id]`                          | Public   | any                 | Event detail (published only; drafts 404 for non-owners). Increments a genuine view row in `event_analytics` for signed-in viewers when that table is implemented.                                                                                                                                                                                                                                                                                         |
+| `GET /api/recommendations`                      | Required | attendee            | SmartMatch ranked events for the current user: `{ results: { event, score, reasons[] }[] }`. Uses saved preferences unless overridden by query params (`lat`, `lng`, `radiusKm`, `stateCode`, `cityId`, `locality`); selected administrative location is applied to the candidate database query.                                                                                                                                                          |
+| `POST /api/events/[id]/register`                | Required | any (not own event) | Transactional registration (capacity + deadline + duplicate enforced). 201 → registration. Errors: `EVENT_FULL`, `DEADLINE_PASSED`, `ALREADY_REGISTERED`, `FORBIDDEN` for own event.                                                                                                                                                                                                                                                                       |
+| `DELETE /api/events/[id]/register`              | Required | attendee (own)      | Cancel own registration; frees capacity transactionally.                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `POST /api/events/[id]/save`                    | Required | attendee            | Idempotent save. `DELETE` on the same path unsaves.                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `GET /api/me/registrations`                     | Required | attendee            | Own registrations (upcoming + past).                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `GET /api/me/saved`                             | Required | attendee            | Own saved events.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `GET /api/me/profile` / `PATCH /api/me/profile` | Required | own                 | Read/update own profile + preferences (validated; role field not patchable here).                                                                                                                                                                                                                                                                                                                                                                          |
+| `POST /api/me/become-organizer`                 | Required | attendee            | One-way self-upgrade to organizer (MVP rule, SECURITY.md §2).                                                                                                                                                                                                                                                                                                                                                                                              |
+| `GET /api/notifications`                        | Required | own                 | Own notifications, newest first; `?unread=true` filter.                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `POST /api/notifications/[id]/read`             | Required | own                 | Mark one read. `POST /api/notifications/read-all` marks all.                                                                                                                                                                                                                                                                                                                                                                                               |
+| `POST /api/events/[id]/feedback`                | Required | eligible attendee   | One feedback per attendee per event; only after event end + `attendance_status = attended`. Body: `{ rating: 1..5, comment? }`.                                                                                                                                                                                                                                                                                                                            |
+| `POST /api/organizer/events`                    | Required | organizer           | Create an India event with `country_code: "IN"`, valid `state_code` + `city_id`, venue name, and address (plus the existing event fields). Server checks the city-to-division relationship; organizer identity comes from the session. Status starts `draft`; `publish: true` publishes.                                                                                                                                                                   |
+| `GET /api/organizer/events`                     | Required | organizer           | Own events, all statuses, with registration counts.                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `PATCH /api/organizer/events/[id]`              | Required | organizer (owner)   | Edit own event, including its state/UT, city, locality, venue, and address. Publishing requires a valid state/UT, city, venue, and address. Capacity cannot drop below `registered_count` → `VALIDATION`.                                                                                                                                                                                                                                                  |
+| `POST /api/organizer/events/[id]/cancel`        | Required | organizer (owner)   | Sets status `cancelled`; creates notifications for all registered attendees in the same operation.                                                                                                                                                                                                                                                                                                                                                         |
+| `GET /api/organizer/events/[id]/attendees`      | Required | organizer (owner)   | Attendee display names + registration/attendance status only — never emails.                                                                                                                                                                                                                                                                                                                                                                               |
+| `PATCH /api/organizer/events/[id]/attendance`   | Required | organizer (owner)   | Update attendance for a registered attendee after the event; body `{ attendeeId, attendanceStatus: "attended"                                                                                                                                                                                                                                                                                                                                              | "no_show" }`; attendee cannot set their own attendance. P1 unless explicitly needed for the demo. |
+| `GET /api/organizer/stats`                      | Required | organizer           | Real aggregates for own events: registrations per event, remaining capacity, total views (only if analytics rows exist). Recharts consumes this shape.                                                                                                                                                                                                                                                                                                     |
+| `GET /api/admin/events`                         | Required | admin               | All events incl. reported/suspicious, for moderation.                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `POST /api/admin/events/[id]/remove`            | Required | admin               | Remove (cancel + flag) an event; notifies organizer.                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `POST /api/admin/events/[id]/restore`           | Required | admin               | Restore an event removed by moderation to its previous status.                                                                                                                                                                                                                                                                                                                                                                                             |
+| `GET /api/admin/stats`                          | Required | admin               | Platform totals: users, events, registrations.                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 Rules for every handler: derive the user from the session (never from the body) → validate with zod → authorize (role + ownership) → run business rules → return the standard shape. Pagination and filtering happen in SQL via the Supabase query builder, not in memory.
 
@@ -171,25 +173,25 @@ scoreEvent(event: ScorableEvent, prefs: UserPreferences, now: Date): { score: nu
 
 ## 9. Environment Variables (complete list)
 
-| Variable | Scope | Required | Purpose |
-|---|---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | public | yes | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | public | yes | Anon key (RLS-protected) |
-| `SUPABASE_SERVICE_ROLE_KEY` | server-only | yes | Admin/trusted operations |
-| `NEXT_PUBLIC_APP_URL` | public | yes | Canonical URL (auth redirects) |
-| `NEXT_PUBLIC_MAP_STYLE_URL` | public | no (has default) | Map style URL override |
+| Variable                        | Scope       | Required         | Purpose                        |
+| ------------------------------- | ----------- | ---------------- | ------------------------------ |
+| `NEXT_PUBLIC_SUPABASE_URL`      | public      | yes              | Supabase project URL           |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | public      | yes              | Anon key (RLS-protected)       |
+| `SUPABASE_SERVICE_ROLE_KEY`     | server-only | yes              | Admin/trusted operations       |
+| `NEXT_PUBLIC_APP_URL`           | public      | yes              | Canonical URL (auth redirects) |
+| `NEXT_PUBLIC_MAP_STYLE_URL`     | public      | no (has default) | Map style URL override         |
 
 `.env.example` must list exactly these, with descriptions and no real values.
 
 ## 10. Tooling & Commands
 
-| Tool | Use |
-|---|---|
-| npm | Only package manager; scripts below |
+| Tool                                       | Use                                                                                                 |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| npm                                        | Only package manager; scripts below                                                                 |
 | Supabase CLI (`supabase` devDep or global) | Apply migrations to the linked project; `supabase gen types typescript` → `types/database.types.ts` |
-| Vercel CLI (optional) | `vercel link`, `vercel env pull`; dashboard is equally acceptable |
-| Git + GitHub | Source control; `main` stays deployable; feature branches per team member area (master context §11) |
-| Playwright CLI | `npx playwright install chromium`, run E2E |
+| Vercel CLI (optional)                      | `vercel link`, `vercel env pull`; dashboard is equally acceptable                                   |
+| Git + GitHub                               | Source control; `main` stays deployable; feature branches per team member area (master context §11) |
+| Playwright CLI                             | `npx playwright install chromium`, run E2E                                                          |
 
 **package.json scripts (exact names):**
 
