@@ -13,11 +13,11 @@ export const supabasePublicEnvironmentSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: httpUrlSchema,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   NEXT_PUBLIC_APP_URL: httpUrlSchema,
+  NEXT_PUBLIC_MAP_STYLE_URL: httpUrlSchema.default(DEFAULT_MAP_STYLE_URL),
 });
 
 export const serverEnvironmentSchema = supabasePublicEnvironmentSchema.extend({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  NEXT_PUBLIC_MAP_STYLE_URL: httpUrlSchema.default(DEFAULT_MAP_STYLE_URL),
 });
 
 export type ServerEnvironment = z.output<typeof serverEnvironmentSchema>;
@@ -36,10 +36,26 @@ export class EnvironmentConfigurationError extends Error {
   }
 }
 
+function normalizePublicEnvironmentInput(
+  input: Record<string, string | undefined>,
+): Record<string, string | undefined> {
+  if (input.NEXT_PUBLIC_SUPABASE_ANON_KEY !== undefined) {
+    return input;
+  }
+
+  return {
+    ...input,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY:
+      input.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  };
+}
+
 export function parseServerEnvironment(
   input: Record<string, string | undefined>,
 ): ServerEnvironment {
-  const result = serverEnvironmentSchema.safeParse(input);
+  const result = serverEnvironmentSchema.safeParse(
+    normalizePublicEnvironmentInput(input),
+  );
 
   if (!result.success) {
     throw new EnvironmentConfigurationError(
@@ -53,7 +69,9 @@ export function parseServerEnvironment(
 export function parseSupabasePublicEnvironment(
   input: Record<string, string | undefined>,
 ): SupabasePublicEnvironment {
-  const result = supabasePublicEnvironmentSchema.safeParse(input);
+  const result = supabasePublicEnvironmentSchema.safeParse(
+    normalizePublicEnvironmentInput(input),
+  );
 
   if (!result.success) {
     throw new EnvironmentConfigurationError(

@@ -48,7 +48,7 @@
 **Public (browser-safe, `NEXT_PUBLIC_`):**
 
 - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL.
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — anon key (safe only because RLS is enabled and verified).
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — public Supabase key (safe only with correctly enforced RLS); legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` is also accepted for existing projects.
 - `NEXT_PUBLIC_APP_URL` — canonical app URL for redirects.
 - `NEXT_PUBLIC_MAP_STYLE_URL` — free map style URL (no key).
 
@@ -66,7 +66,7 @@
 - **Organizer promotion:** `POST /api/me/become-organizer` calls a narrow security-definer function that derives the user from `auth.uid()` and permits only `attendee` → `organizer`; no client-supplied role or user ID is accepted. Execute permission is not granted to `anon` or `PUBLIC`.
 - **Authorization:** role + ownership checks run before any mutation (see §2).
 - **Business-rule enforcement in the database:** capacity, registration deadline, event status, duplicate active registration, registration count, cancellation count, and notification creation for registration/cancellation are enforced in one database transaction/function. Server-side checks improve UX but are not the integrity boundary.
-- **Rate limiting:** rely on Vercel/Supabase platform limits for the MVP; auth endpoints keep Supabase's built-in rate limits enabled. Revisit before any public launch.
+- **Rate limiting:** auth requests depend on Supabase Auth's configured built-in rate limits. Before public launch, verify those limits for the production project and configure hosting-level protections/monitoring for expensive public endpoints; this app does not implement an application-level rate limiter.
 - **CORS:** same-origin app; no wildcard CORS on API routes.
 - **Error responses:** typed shape `{ error: { code, message } }`; messages never include stack traces, SQL, table names beyond what's needed, or other users' data.
 - **Injection/XSS:** parameterized queries via the Supabase client only (no string-built SQL); React's default escaping for all rendered user content; no `dangerouslySetInnerHTML` with user data.
@@ -83,7 +83,8 @@
   - `event_moderation`: RLS is enabled with no direct client grants; moderation state is accessed only through database functions that independently check `profiles.role = 'admin'`.
 - **Location privacy:** a user's preferred coordinates are visible only to that user. Distances shown publicly are event-to-viewer, computed for the viewer only.
 - **Retention/deletion:** follow the explicit account-deletion policy in DATABASE.md. Organizer-owned events must not become orphaned. Cancelled events and registrations retain status history unless a verified deletion/privacy request requires removal.
-- **Transport:** HTTPS everywhere (Vercel + Supabase defaults); HSTS by platform.
+- **Response headers:** Next.js sets `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, and a restrictive `Permissions-Policy`; HSTS is set for production responses. A Content Security Policy is not yet enforced. Define and test a CSP against Next.js script/style behavior, event image hosts, and the selected map style/tile hosts in staging before enabling it.
+- **Transport:** HTTPS everywhere (Vercel + Supabase defaults); HSTS in production.
 
 ## 7. Logging
 

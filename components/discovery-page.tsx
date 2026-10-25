@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
 import { EventCard } from '@/components/event-card';
+import { EventMap } from '@/components/event-map';
 import { LocationPicker } from '@/components/location-picker';
 import {
   apiRequest,
@@ -53,6 +54,7 @@ export function DiscoveryPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMatches, setLoadingMatches] = useState(false);
+  const [resultView, setResultView] = useState<'list' | 'map'>('list');
   const [error, setError] = useState('');
   const [matchError, setMatchError] = useState('');
   const [page, setPage] = useState(1);
@@ -484,7 +486,25 @@ export function DiscoveryPage() {
             </button>
           </div>
         )}
-        {loading ? (
+        <div className="results-view-toggle" role="group" aria-label="Event results view">
+          <button
+            className="button button-quiet"
+            type="button"
+            aria-pressed={resultView === 'list'}
+            onClick={() => setResultView('list')}
+          >
+            List
+          </button>
+          <button
+            className="button button-quiet"
+            type="button"
+            aria-pressed={resultView === 'map'}
+            onClick={() => setResultView('map')}
+          >
+            Map
+          </button>
+        </div>
+        {error ? null : loading ? (
           <div className="event-grid" aria-label="Loading events">
             {Array.from({ length: 6 }, (_, index) => (
               <div className="event-skeleton" key={index}>
@@ -494,7 +514,9 @@ export function DiscoveryPage() {
               </div>
             ))}
           </div>
-        ) : !error && events.length === 0 ? (
+        ) : resultView === 'map' ? (
+          <EventMap events={events} />
+        ) : events.length === 0 ? (
           <div className="empty-panel">
             <span className="empty-mark" aria-hidden="true">
               0

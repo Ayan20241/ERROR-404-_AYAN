@@ -22,6 +22,19 @@ describe('parseServerEnvironment', () => {
     );
   });
 
+  it('accepts a Supabase publishable key as the public client key', () => {
+    const parsed = parseServerEnvironment({
+      NEXT_PUBLIC_SUPABASE_URL: validEnvironment.NEXT_PUBLIC_SUPABASE_URL,
+      NEXT_PUBLIC_APP_URL: validEnvironment.NEXT_PUBLIC_APP_URL,
+      SUPABASE_SERVICE_ROLE_KEY: validEnvironment.SUPABASE_SERVICE_ROLE_KEY,
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-publishable-key',
+    });
+
+    expect(parsed.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe(
+      'test-publishable-key',
+    );
+  });
+
   describe('parseSupabasePublicEnvironment', () => {
     it('requires only the public Supabase values and does not expose values', () => {
       expect(() => parseSupabasePublicEnvironment({})).toThrow(
@@ -41,6 +54,18 @@ describe('parseServerEnvironment', () => {
       expect(error).toBeInstanceOf(EnvironmentConfigurationError);
       expect(String(error)).toContain('NEXT_PUBLIC_SUPABASE_URL');
       expect(String(error)).not.toContain('test-public-value');
+    });
+
+    it('normalizes a publishable key for existing Supabase client setup', () => {
+      const environment = parseSupabasePublicEnvironment({
+        NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-publishable-key',
+        NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+      });
+
+      expect(environment.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe(
+        'test-publishable-key',
+      );
     });
   });
 

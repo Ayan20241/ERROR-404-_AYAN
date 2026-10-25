@@ -1,3 +1,5 @@
+@import 'maplibre-gl/dist/maplibre-gl.css';
+
 :root {
   --paper: #fbfaf6;
   --surface: #ffffff;
@@ -614,6 +616,66 @@ textarea::placeholder {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
+}
+.results-view-toggle {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+.results-view-toggle button[aria-pressed='true'] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+.event-map {
+  width: 100%;
+  min-height: 360px;
+  height: min(68vh, 680px);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.map-message {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  color: var(--muted);
+  text-align: center;
+}
+.event-map-marker {
+  width: 32px;
+  height: 32px;
+  border: 3px solid white;
+  border-radius: 50%;
+  background: var(--coral);
+  box-shadow: 0 2px 12px rgb(18 16 12 / 32%);
+  color: white;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.event-map-popup {
+  display: grid;
+  gap: 6px;
+  max-width: 240px;
+  color: var(--ink);
+}
+.event-map-popup strong {
+  font-size: 0.9rem;
+}
+.event-map-popup span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.event-map-popup a {
+  color: #9b3e22;
+  font-weight: 800;
 }
 .event-card {
   overflow: hidden;

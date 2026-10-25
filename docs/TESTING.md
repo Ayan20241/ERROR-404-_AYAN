@@ -33,9 +33,16 @@ Pure logic, heavily covered:
   - Anon can read published events only — never drafts.
 - Concurrency: parallel registration attempts for the final seat → exactly one success, remaining attempts return `EVENT_FULL`, and `registered_count` equals the number of active registrations. Also test concurrent cancellation/re-registration and ensure no double decrement/increment.
 
-### End-to-End Testing (Playwright — essential flows, time permitting)
+### End-to-End Testing (Playwright)
 
-The three demo scenarios from the master context, scripted:
+The configured `npm run test:e2e` suite starts a dedicated local Next.js server and uses mocked same-origin API responses. It currently checks:
+
+- Public event discovery renders API event data and switches between list and map fallback when event coordinates are missing.
+- MapLibre initializes a map and event marker against a mocked style JSON; external tile-provider availability is not tested.
+- Discovery API failure is shown and can recover after retry.
+- Authentication API errors are rendered as user-safe messages.
+
+These browser tests do not verify live authentication, Supabase RLS, registration/capacity transactions, or external map tile availability. The following real-service flows remain required against an isolated local Supabase database before production:
 
 1. Attendee discovery: sign in → set interests/radius/budget → recommendations appear with explanations → open event → register → event visible in My registrations.
 2. Organizer: sign in as organizer → create + publish event → dashboard shows it → registration count updates after Scenario 1's registration.

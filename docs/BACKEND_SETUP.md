@@ -7,7 +7,7 @@ The repository began as a specification pack with no application source, package
 Implemented:
 
 - A minimal Next.js/TypeScript project and npm scripts for development, build, lint, type checking, and Vitest.
-- Zod-based server environment parsing, using the five variables defined in TRD.md §9. Configuration errors list invalid variable names only and never include values.
+- Zod-based server environment parsing, using the five variables defined in TRD.md §9. Configuration errors list invalid variable names only and never include values; requests intercepted by `proxy.ts` receive a no-store `503` response identifying those names.
 - A typed `AppError` and standard `{ error: { code, message } }` JSON response mapping.
 - Shared JSON/query parsing helpers and a validated event discovery query shape.
 - `GET /api/health`, which reports process liveness only and does not claim Supabase/database readiness.
@@ -21,14 +21,14 @@ Implemented:
 - Mocked unit tests for auth input, error mapping, session handling, cookie flags, and authorization guards. A local-only database integration suite exercises RLS and registration behavior when explicitly enabled.
 
 The app has no browser Supabase client because auth cookies are HTTP-only; browser authentication goes through same-origin Route Handlers. A server-only service-role client is used only after session verification to record event views; user-facing admin operations still use the caller's session and role-checked database functions.
-The initial database schema, RLS policies, and transaction functions exist as numbered migrations. They were applied to the current local instance before this Phase 3 work; the auth work does not replay them.
-Playwright and generated database types remain deferred. The local Supabase CLI is available as an npm dev dependency.
+The initial database schema, RLS policies, and transaction functions exist as numbered migrations. Earlier development notes reported applying them to a local instance; the current checkout's local Supabase status could not be verified because Docker Desktop is unavailable. Check migration history before relying on any local database state.
+Playwright is configured for mocked browser journey/error tests. These do not replace live Supabase/RLS verification. Generated database types remain deferred. The local Supabase CLI is available as an npm dev dependency.
 
 ## Local setup
 
 1. Use Node.js 20.9 or newer and npm.
-2. Install dependencies with `npm install`.
-3. Copy `.env.example` to `.env.local` and replace placeholders only with local CLI values or credentials from an explicitly approved Supabase project. Never commit `.env.local`.
+2. Install locked dependencies with `npm ci`.
+3. Copy `.env.example` to `.env.local` only if `.env.local` does not already exist. Replace placeholders only with local CLI values or credentials from an explicitly approved Supabase project. Never commit `.env.local`.
 4. Run `npm run dev`.
 5. Check `http://localhost:3000/api/health` for the process liveness response.
 
@@ -43,7 +43,27 @@ The Supabase CLI is available through the project's npm dev dependency, and loca
 3. Use `npm exec -- supabase migration list --local` to inspect migration history without applying migrations.
 4. `npm exec -- supabase db reset` is destructive and is not required for the tests described below. Never run it against data that must be preserved.
 
-Do not link the local verification workflow to a shared or production project. Runtime integration tests require the endpoint to be loopback on port 54321 and use temporary users/events with scoped cleanup.
+Do not link the local verification workflow to a shared or production project. Runtime integration tests require project ID `hyperlocal-events`, API loopback port 54321, and database loopback port 54322. They use temporary users/events with scoped cleanup.
+
+To run the database/RLS integration test on Windows PowerShell, read local Supabase credentials into process variables without writing or printing them:
+
+```powershell
+$status = (npm exec -- supabase status --output json | Out-String) | ConvertFrom-Json
+$api = [uri]$status.API_URL
+$db = [uri]$status.DB_URL
+if ($status.linked_project -ne 'hyperlocal-events' -or $api.Host -notin @('127.0.0.1', 'localhost', '::1') -or $api.Port -ne 54321 -or $db.Host -notin @('127.0.0.1', 'localhost', '::1') -or $db.Port -ne 54322) {
+  throw 'Refusing to test against a non-local Supabase endpoint.'
+}
+$env:SUPABASE_TEST_PROJECT_ID = $status.linked_project
+$env:SUPABASE_TEST_URL = $status.API_URL
+$env:SUPABASE_TEST_DATABASE_URL = $status.DB_URL
+$env:SUPABASE_TEST_ANON_KEY = $status.ANON_KEY
+$env:SUPABASE_TEST_SERVICE_ROLE_KEY = $status.SERVICE_ROLE_KEY
+npm run test -- tests/integration/security.local.test.ts
+Remove-Item Env:SUPABASE_TEST_PROJECT_ID, Env:SUPABASE_TEST_URL, Env:SUPABASE_TEST_DATABASE_URL, Env:SUPABASE_TEST_ANON_KEY, Env:SUPABASE_TEST_SERVICE_ROLE_KEY
+```
+
+The test uses the elevated local service-role credential only to create/delete its own test accounts/events and inspect test state; public/user assertions use anon/user-scoped clients. If a test fails before cleanup, inspect only the isolated generated `phase23-*` test data and remove only its test IDs after verification. Never reset the database to clean up.
 
 There is no seed file. The demo city remains undecided; no demonstration accounts are created by migrations.
 
@@ -69,11 +89,11 @@ The API implements TRD routes for saved events, notifications, feedback, attenda
 
 ## Frontend integration
 
-The App Router frontend includes public event discovery and details, sign-in/sign-up, an attendee workspace, organizer event/attendance/statistics tools, and the admin moderation workspace. Client requests use the same-origin `/api` routes and the existing JSON error format; authentication and authorization remain enforced by the server routes.
+The App Router frontend includes public event discovery and details, sign-in/sign-up, an attendee workspace, organizer event/attendance/statistics tools, and the admin moderation workspace. Discovery includes a MapLibre map using OpenFreeMap's keyless style by default; events without coordinates remain list-only, and tile failure falls back to the list. Client requests use same-origin `/api` routes and the existing JSON error format; authentication and authorization remain enforced by the server routes.
 
 The UI does not use fabricated event data. It reports backend errors when an endpoint or required database object is unavailable. Migration `004_engagement_and_insights.sql` has not been applied or verified against the intended local database for this phase, so saved events, event-view tracking, moderation, database-backed statistics, and recommendations must not be considered runtime-verified against PostgreSQL until that migration is applied and tested separately.
 
-Run `npm run dev` after completing the local setup above. The app requires the configured Supabase URL, public anon key, service-role key (server-only), and canonical application URL listed in `.env.example`; without the required runtime configuration, application routes that use Supabase will fail closed. The `/api/health` endpoint remains independent of Supabase configuration.
+Run `npm run dev` after completing the local setup above. The app requires the configured Supabase URL, public publishable key (or legacy anon key), service-role key (server-only), and canonical application URL listed in `.env.example`; without the required runtime configuration, application routes that use Supabase will fail closed. The `/api/health` endpoint remains independent of Supabase configuration and reports process liveness only.
 
 ## Testing authentication and RLS
 
@@ -112,8 +132,8 @@ Do not paste or log `$status`, environment values, session cookies, or tokens. T
 
 The PRD/TRD do not define numbered “Phase 4.” For the user-requested phase naming, **Phase 4 is an inferred proposal** based on the next incomplete item in the backend plan: the core API. This proposal covers public event reads/search, profile/preferences, organizer promotion and event management, and attendee registration/cancellation.
 
-The Phase 4 core API proposal is implemented in Route Handlers and migration 003. It does not claim the complete P0 product: SmartMatch/recommendations, saved-event and notification inbox endpoints, feedback, organizer statistics, admin moderation, UI, and E2E flows remain later work.
+The event, auth, engagement, recommendation, organizer, and admin route/UI surfaces are present. Their unit contracts and error states are tested, but actual Supabase authentication, migration application, RLS enforcement, registration transactions, and capacity behavior have not been verified against a running local database in the current environment.
 
-Next planned backend work is deterministic SmartMatch and remaining engagement services from PRD/TRD, followed by database reconciliation and browser-flow verification.
+The next verification step is a fresh local Supabase startup, migration-status review, database/RLS integration suite, and authenticated browser journey against isolated local accounts. Map rendering uses MapLibre and a mocked style in browser tests; external provider availability remains a staging check.
 
 Before each phase, re-check the applicable TRD, DATABASE, SECURITY, ARCHITECTURE, and TESTING requirements. Do not claim database readiness or deployed behavior until it has been exercised against the configured services.

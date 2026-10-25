@@ -176,7 +176,7 @@ scoreEvent(event: ScorableEvent, prefs: UserPreferences, now: Date): { score: nu
 | Variable                        | Scope       | Required         | Purpose                        |
 | ------------------------------- | ----------- | ---------------- | ------------------------------ |
 | `NEXT_PUBLIC_SUPABASE_URL`      | public      | yes              | Supabase project URL           |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | public      | yes              | Anon key (RLS-protected)       |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | public      | yes              | Publishable key (RLS-protected); legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` is also accepted |
 | `SUPABASE_SERVICE_ROLE_KEY`     | server-only | yes              | Admin/trusted operations       |
 | `NEXT_PUBLIC_APP_URL`           | public      | yes              | Canonical URL (auth redirects) |
 | `NEXT_PUBLIC_MAP_STYLE_URL`     | public      | no (has default) | Map style URL override         |

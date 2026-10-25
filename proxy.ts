@@ -1,10 +1,37 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { parseSupabasePublicEnvironment } from '@/lib/env/schema';
+import {
+  EnvironmentConfigurationError,
+  parseSupabasePublicEnvironment,
+  type SupabasePublicEnvironment,
+} from '@/lib/env/schema';
 
 export async function proxy(request: NextRequest) {
-  const environment = parseSupabasePublicEnvironment(process.env);
+  let environment: SupabasePublicEnvironment;
+  try {
+    environment = parseSupabasePublicEnvironment(process.env);
+  } catch (error) {
+    if (!(error instanceof EnvironmentConfigurationError)) {
+      throw error;
+    }
+
+    return NextResponse.json(
+      {
+        error: {
+          code: 'CONFIGURATION',
+          message:
+            'Application configuration is incomplete. Correct the listed environment variables.',
+          variables: error.invalidVariables,
+        },
+      },
+      {
+        status: 503,
+        headers: { 'Cache-Control': 'no-store' },
+      },
+    );
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

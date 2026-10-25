@@ -1,4 +1,6 @@
-# Backend Phase 1 Audit
+# Historical Backend Phase 1 Audit
+
+> This document records a Phase 1 snapshot from the `Backend_1` branch and is not a current inventory. The current integrated implementation and launch-readiness checks are documented in the root README and `docs/BACKEND_SETUP.md`.
 
 **Audit date:** 2026-10-24
 **Branch:** `Backend_1`
@@ -61,7 +63,7 @@ Commands were run on the current `Backend_1` worktree. The final results after t
 | `npm audit` | **PASS** | `found 0 vulnerabilities`. |
 | Local health HTTP check | **PASS** | Production server response: HTTP 200, body `{"status":"ok"}`, `Cache-Control: no-store`; temporary server process was stopped afterward. |
 | `git diff --check` | **PASS** | No whitespace errors reported. |
-| `npm run test:e2e` | **NOT RUN** | No Playwright dependency, E2E test suite, or script exists; deferred until a UI/application flow exists. |
+| `npm run test:e2e` | **NOT RUN AT THE TIME OF THIS AUDIT** | Playwright was deferred in this historical Phase 1 snapshot; a mocked browser suite was added later on the integration/readiness branch. |
 | Supabase migration/RLS/concurrency tests | **NOT RUN** | There are no migrations or Supabase configuration/project credentials; database work is deferred. |
 
 ## Security and scope notes
