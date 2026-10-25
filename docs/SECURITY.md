@@ -8,7 +8,7 @@
 **Methods:**
 
 - Email + password (MVP).
-- Sessions handled with `@supabase/ssr`: httpOnly cookie-based sessions, refreshed in Next.js middleware.
+- Sessions handled by same-origin Route Handlers using `@supabase/ssr` and HTTP-only cookies; `proxy.ts` refreshes sessions on Next.js 16.
 - No custom password storage, ever. Password rules are Supabase's; the UI communicates them honestly.
 
 ## 2. Authorization
@@ -31,7 +31,7 @@
 **Rules:**
 
 - Authorization is enforced **server-side** in every route handler AND by Postgres RLS. Client-side hiding is UX only.
-- Admin role can never be granted through any client-editable field or self-service endpoint. It is assigned only via a server-side operation using the service-role key (e.g. a one-off SQL update by the project owner).
+- Admin role can never be granted through any client-editable field or self-service endpoint. The database does not grant authenticated users update access to `profiles.role`; assigning roles is a trusted administrative operation.
 - Organizer self-upgrade (attendee → organizer from profile) is allowed for the MVP; it grants event creation for *own* events only and nothing else. The endpoint must ignore/reject any requested role value and update only `attendee` to `organizer`; it must never accept `admin` or modify another user.
 - Ownership checks compare the resource's owner id to the session user id on every mutation — no insecure direct object references (IDOR).
 
@@ -61,6 +61,9 @@
 
 - **Input validation:** every route handler validates params/body with zod schemas (shared with DATABASE.md limits). Unknown fields are stripped; invalid input returns 400 with field-safe messages.
 - **Authentication:** handlers derive the user from the session cookie via the Supabase server client; the request body never supplies a user id.
+- **Auth endpoints:** `POST /api/auth/signup`, `POST /api/auth/signin`, `POST /api/auth/signout`, `GET /api/auth/session`, and `GET /api/auth/callback`. Auth mutations require a same-origin `Origin` header. Auth JSON responses are not cacheable and do not return tokens.
+- **Core API:** public event search is SQL-paginated under invoker rights and RLS; event details use the event read policy. Profile updates accept only preference/display fields. Registration delegates to the atomic database RPC. Organizer updates/cancellation recheck owner/admin authorization in database functions and create attendee notifications in the same transaction.
+- **Organizer promotion:** `POST /api/me/become-organizer` calls a narrow security-definer function that derives the user from `auth.uid()` and permits only `attendee` → `organizer`; no client-supplied role or user ID is accepted. Execute permission is not granted to `anon` or `PUBLIC`.
 - **Authorization:** role + ownership checks run before any mutation (see §2).
 - **Business-rule enforcement in the database:** capacity, registration deadline, event status, duplicate active registration, registration count, cancellation count, and notification creation for registration/cancellation are enforced in one database transaction/function. Server-side checks improve UX but are not the integrity boundary.
 - **Rate limiting:** rely on Vercel/Supabase platform limits for the MVP; auth endpoints keep Supabase's built-in rate limits enabled. Revisit before any public launch.
@@ -74,9 +77,10 @@
 - **RLS policies (summary — the migrations are the source of truth):**
   - `profiles`: a user can select/update only their own row; role column changes are blocked at the policy level for non-admins (role updates go through a server endpoint).
   - `events`: anyone (including anon) can select `published` events; organizers can select/insert/update only rows where `organizer_id = auth.uid()`; admins unrestricted via service role.
-  - `registrations`: attendees select/insert/update only their own; the owning organizer can select registrations for their events (display name only via a view that excludes email); no one can update another user's registration.
+  - `registrations`: authenticated users can select only their own registrations; registration changes are performed by narrowly granted database functions, not direct table writes. The owning organizer/admin attendee view exposes display name and registration fields only.
   - `saved_events`, `notifications`, `event_feedback`: strictly owner-scoped (`recipient_id`/`attendee_id = auth.uid()`); feedback insert additionally requires an eligible registration (checked server-side and by policy where feasible).
-  - `event_analytics`: insert-only for authenticated users; selects restricted to the event's organizer/admin.
+  - `event_analytics`: RLS is enabled with no direct client grants or policies; signed-in detail views are inserted through a service-role-only function from server code after session verification, and aggregate reads use a role-checked function. View writes exclude anonymous and owner views and deduplicate per UTC day.
+  - `event_moderation`: RLS is enabled with no direct client grants; moderation state is accessed only through database functions that independently check `profiles.role = 'admin'`.
 - **Location privacy:** a user's preferred coordinates are visible only to that user. Distances shown publicly are event-to-viewer, computed for the viewer only.
 - **Retention/deletion:** follow the explicit account-deletion policy in DATABASE.md. Organizer-owned events must not become orphaned. Cancelled events and registrations retain status history unless a verified deletion/privacy request requires removal.
 - **Transport:** HTTPS everywhere (Vercel + Supabase defaults); HSTS by platform.

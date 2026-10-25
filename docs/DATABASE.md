@@ -21,6 +21,7 @@
 
 **Purpose:** One row per authenticated user; preferences drive SmartMatch and defaults.
 **Columns:**
+
 - `id uuid PK references auth.users(id) on delete cascade`
 - `display_name text`
 - `role user_role not null default 'attendee'` (`attendee | organizer | admin`)
@@ -36,12 +37,16 @@
 
 **Purpose:** A single event listing owned by one organizer.
 **Columns:**
+
 - `id uuid PK`
 - `organizer_id uuid not null references profiles(id)`
 - `title text not null`
 - `slug text` (optional, for readable URLs)
 - `description text not null`
 - `category text not null` (one of the fixed category list in §5)
+- `country_code text` (currently nullable for legacy ambiguity; new events use `IN`)
+- `city_id text` (nullable FK to the India city catalog; identifies its state/UT through the catalog)
+- `locality text` (optional area name, max 120 characters)
 - `venue_name text`, `address text`
 - `latitude double precision`, `longitude double precision` (nullable — events without coordinates are list-only)
 - `start_at timestamptz not null`, `end_at timestamptz not null`
@@ -57,6 +62,7 @@
 
 **Purpose:** An attendee's registration for an event.
 **Columns:**
+
 - `id uuid PK`
 - `event_id uuid not null references events(id) on delete cascade`
 - `attendee_id uuid not null references profiles(id) on delete cascade`
@@ -74,6 +80,7 @@
 
 **Purpose:** In-app notifications (registration confirmations, event updates/cancellations, reminders).
 **Columns:**
+
 - `id uuid PK`
 - `recipient_id uuid not null references profiles(id) on delete cascade`
 - `event_id uuid references events(id) on delete set null`
@@ -86,6 +93,7 @@
 
 **Purpose:** Post-event ratings/comments from eligible attendees.
 **Columns:**
+
 - `id uuid PK`
 - `event_id uuid not null references events(id) on delete cascade`
 - `attendee_id uuid not null references profiles(id) on delete cascade`
@@ -93,10 +101,15 @@
 - `comment text`
 - `created_at`
 
-### event_analytics (only if implemented — collect nothing speculative)
+### event_analytics
 
-**Purpose:** Genuine engagement counters, e.g. event detail views.
-**Columns:** `id uuid PK`, `event_id uuid not null references events(id)`, `viewer_id uuid references profiles(id)`, `viewed_at timestamptz not null default now()`. Deduplicate per viewer per event per day at write time where feasible; never display counts that are not backed by rows here.
+**Purpose:** Genuine signed-in event-detail views for organizer insights.
+**Columns:** `id uuid PK`, `event_id uuid not null references events(id)`, `viewer_id uuid not null references profiles(id)`, `viewed_on date`, `viewed_at timestamptz not null default now()`. Migration 004 deduplicates each attendee/event/UTC day; anonymous and organizer self-views are not counted.
+
+### event_moderation
+
+**Purpose:** Preserve the prior event status while an administrator removes an event, allowing a safe restore.
+**Columns:** `event_id uuid PK references events(id)`, `previous_status event_status`, `moderated_by uuid references profiles(id)`, `flagged_at timestamptz`. The table has RLS enabled and no direct client grants; only guarded administrator database functions read or mutate it.
 
 ## 4. Relationships
 
@@ -106,7 +119,7 @@
 - `profiles` ↔ `events` via `saved_events`: many-to-many bookmarks.
 - `profiles` → `notifications`: one recipient has many notifications.
 - `events` + `profiles` → `event_feedback`: one feedback per attendee per event.
-- `events` → `event_analytics`: one event has many view records.
+- `events` → `event_analytics`: one event has many deduplicated signed-in view records.
 
 ## 5. Constraints
 
@@ -114,6 +127,7 @@
 - **Unique:** `saved_events (attendee_id, event_id)`; `event_feedback (attendee_id, event_id)`; `profiles.id` = the auth user id. For registrations, retain history while permitting a user to cancel and later re-register: create a **partial unique index** on `(attendee_id, event_id) WHERE status = 'registered'`. Do not add a full unique constraint on `(attendee_id, event_id)`.
 - **Checks:** `events.capacity > 0`; `events.price >= 0`; `events.end_at > events.start_at`; `events.registered_count >= 0 and registered_count <= capacity`; `event_feedback.rating between 1 and 5`; latitude/longitude ranges when present.
 - **Foreign keys:** as defined per table; organizer deletion must not orphan events (`organizer_id` has no cascade — handle account deletion deliberately).
+- **India locations:** `india_admin_divisions` stores state and Union Territory rows separately. `india_cities` references one division and has a state-scoped unique city name plus a stable state-prefixed city ID. Event `(country_code, city_id)` references the catalog, so an event cannot pair a city with another division. Venue/address remain event fields; locality is an optional event-provided label, not a guessed geocode.
 - **Capacity integrity:** active registration insert/cancel and `registered_count` increment/decrement happen atomically in a database transaction/function. A check constraint prevents `registered_count > capacity`; the function locks the event row (or uses an equivalent atomic conditional update) so concurrent requests cannot oversell. `registered_count` must equal the count of active registrations; add a reconciliation test/script for development.
 
 ### Required database functions
@@ -128,16 +142,16 @@ Functions must set a safe `search_path` if `SECURITY DEFINER` is required, fully
 
 ## 6. Indexes
 
-| Index | Reason |
-|---|---|
-| `events (status, start_at)` | Discovery feed: published + upcoming |
-| `events (category)` | Category filtering |
-| `events (organizer_id)` | Organizer dashboard queries |
-| `events (latitude, longitude)` | Bounding-box prefilter for radius search |
-| `registrations (event_id)`, `registrations (attendee_id)` | Attendee lists + "my registrations" |
-| `saved_events (attendee_id)` | Saved list |
-| `notifications (recipient_id, read_at)` | Unread counts + inbox |
-| `event_feedback (event_id)` | Per-event feedback |
+| Index                                                     | Reason                                   |
+| --------------------------------------------------------- | ---------------------------------------- |
+| `events (status, start_at)`                               | Discovery feed: published + upcoming     |
+| `events (category)`                                       | Category filtering                       |
+| `events (organizer_id)`                                   | Organizer dashboard queries              |
+| `events (latitude, longitude)`                            | Bounding-box prefilter for radius search |
+| `registrations (event_id)`, `registrations (attendee_id)` | Attendee lists + "my registrations"      |
+| `saved_events (attendee_id)`                              | Saved list                               |
+| `notifications (recipient_id, read_at)`                   | Unread counts + inbox                    |
+| `event_feedback (event_id)`                               | Per-event feedback                       |
 
 ## 7. Data Validation
 
@@ -179,3 +193,27 @@ For demo and testing (labelled as demonstration data in the UI where relevant):
 - Demo accounts: one attendee (with interests: Technology, Music; radius 10 km; budget set), one organizer, one admin.
 - ~12 events across at least 6 categories, varied prices (free + paid), varied distances around the demo city's center, start times spread over the next 14 days; include edge cases: one full event, one almost-full, one cancelled (hidden from discovery), one draft (organizer-only), one past event with feedback.
 - A few registrations and one feedback entry so dashboards and the engagement loop demo with real rows — presented as seeded demo content, never as real user statistics.
+
+## 13. Initial migration implementation status
+
+The database foundation is represented by ordered migrations:
+
+- `supabase/migrations/001_core_schema.sql` creates the four enums and the six core tables above, their documented checks and indexes, `updated_at` triggers, and a profile-creation trigger for new Supabase Auth users.
+- `supabase/migrations/002_rls_and_integrity.sql` enables RLS, applies column-scoped grants and owner/organizer policies, exposes an organizer attendee view with display names only, and defines the registration, cancellation, and attendance functions.
+- `supabase/migrations/003_core_api.sql` adds the invoker-rights, SQL-paginated public event search function; an authenticated attendee-to-organizer-only promotion function; and owner/admin-checked event update/cancellation functions. Event updates/cancellations and attendee notifications are atomic. Event update locks the row and checks active registrations before reducing capacity.
+- `supabase/migrations/004_engagement_and_insights.sql` adds deduplicated signed-in event views, private moderation state, idempotent attendee saves, owner-scoped organizer aggregates, admin-only platform aggregates and moderation listing/removal/restore functions.
+- `supabase/migrations/005_india_location_catalog.sql` seeds all 28 states and 8 Union Territories separately, with an initial curated set of urban city choices; adds nullable event location references, public read-only catalog RLS, a location-aware SQL search function, and location support to the existing owner-checked event update function. It deliberately does not backfill legacy event locations.
+
+The current city catalog is an initial selectable set of major/administrative urban centres, not a complete list of every Indian municipality, town, or locality. Extend it through reviewed forward-only catalog migrations as coverage is needed. Do not add cities as free-text event locations or infer state/city from legacy addresses.
+
+For legacy events, `country_code`, `city_id`, and `locality` remain `NULL`; existing venue, address, and coordinates are preserved. Do not assign `IN` or a city based only on text or coordinates. New organizer event creation requires an Indian state/UT, catalog city, venue, and address. To publish a legacy event, its owner must explicitly provide a valid state/UT, city, venue, and address.
+
+The anonymous event-read policy checks only `events.status = 'published'`; it does not query tables unavailable to `anon`. Authenticated event reads additionally allow an organizer to read their own events, an attendee to read events they registered for, and an admin to read events. Profiles remain owner-readable through the client policy.
+
+`register_for_event` only accepts an authenticated profile whose role is `attendee`. It locks the event row, rejects the organizer, unavailable events, passed deadlines, duplicate active registrations, and full events; inserts a new registration row (preserving cancelled rows as history), updates the count, and inserts a confirmation notification in the same transaction. `cancel_event_registration` is idempotent for already-cancelled registrations and preserves history while decrementing capacity exactly once. `mark_event_attendance` is restricted to the event organizer or an admin, requires an ended event and active registration, and accepts only `attended` or `no_show`.
+
+Security-definer functions use a restricted `pg_catalog, pg_temp` search path and fully qualified application/auth references. Public execution is revoked; user/admin functions are granted to `authenticated` and enforce the caller's role internally. Event-view insertion is granted only to `service_role` and is called from the server after session verification. These static definitions do not substitute for PostgreSQL execution, RLS-role testing, authorization testing, concurrent-registration testing, or a registered-count reconciliation test.
+
+The local Supabase config currently targets PostgreSQL major version 17 and disables automatic seed loading. Confirm that this matches the target Supabase project before applying migrations. No `seed.sql` is included: the demo city and real demo Auth accounts have not been provided, and fabricated accounts or credentials must not be created.
+
+Migration 003 is forward-only; do not edit migrations 001/002 that may already have been applied. Apply it only to the intended local project after confirming the CLI status, using `npm exec -- supabase migration up --local`; never link it to a shared/demo/production project. Static migration-contract tests are not evidence that the new SQL has been applied or runtime-verified. Generated TypeScript database types remain deferred.
