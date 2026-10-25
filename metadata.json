@@ -1,0 +1,6 @@
+{
+  "name": "Locora — Hyperlocal Cultural Gatherings",
+  "description": "Hyperlocal cultural chronicles, weekend workshops, indie music showcases, and creator popups curated for urban India with Locora.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
